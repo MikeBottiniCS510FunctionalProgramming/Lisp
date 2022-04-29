@@ -4,7 +4,7 @@
 
 module Expr where
 
-data Atom = Number Int | Keyword String deriving(Show)
+data Atom = Number Int | Keyword String deriving(Show, Eq)
 
 data Expr = Atom Atom | List [Expr] deriving(Show)
 
