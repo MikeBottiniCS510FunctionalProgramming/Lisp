@@ -9,9 +9,11 @@
 -- cons
 -- if
 --
--- We also define `nil` and `t` for convenience.
+-- We also define `nil`, `t`, and `cond` for convenience.
 
 module Builtins where
+
+import qualified Data.Map.Strict as Map
 
 import Expr
 
@@ -50,7 +52,50 @@ bCons :: Expr -> Expr -> Expr
 bCons x (Atom _) = error "cons expects a list!"
 bCons x (List xs) = List (x:xs)
 
-bIf :: Expr -> Expr -> Expr -> Expr
-bIf cnd x y = case cnd of
-    (List []) -> y
-    _ -> x
+bIf :: Map.Map String Expr -> Expr -> Expr -> Expr -> Expr
+bIf m cnd x y = case (eval m cnd) of
+  (List []) -> eval m y
+  _ -> eval m x
+
+-- We don't have macros, so we have to define `cond`, which works on a list of Exprs.
+bCond :: Map.Map String Expr -> [Expr] -> Expr
+bCond _ [] = nil
+bCond m ((List [x, y]):zs) = case (eval m x) of
+  (List []) -> bCond m zs
+  _ -> eval m y
+bCond _ _ = error "current clause must be a two-element list!"
+
+eval :: Map.Map String Expr -> Expr -> Expr
+
+-- If the expression is a number, it evaluates to itself.
+eval _ x@(Atom (Number _)) = x
+
+-- If the expression is an atom but is a keyword, a lookup occurs.
+eval m (Atom (Keyword k)) = case Map.lookup k m of
+    Just e -> e
+    Nothing -> error ("Lookup error " ++ k)
+
+-- If the expression is a list of expressions, we now perform pattern matching.
+eval m xs = case xs of
+    List [Atom (Keyword "quote"), x] -> bQuote x
+    List (Atom (Keyword "quote"):_) -> error "quote: incorrect arity"
+
+    List [Atom (Keyword "atom"), x] -> bAtom (eval m x)
+    List (Atom (Keyword "atom"):_) -> error "atom: incorrect arity"
+
+    List [Atom (Keyword "eq"), x, y] -> bEq (eval m x) (eval m y)
+    List (Atom (Keyword "eq"):_) -> error "eq: incorrect arity"
+
+    List [Atom (Keyword "car"), xs] -> bCar (eval m xs)
+    List (Atom (Keyword "car"):_) -> error "car: incorrect arity"
+
+    List [Atom (Keyword "cdr"), xs] -> bCdr (eval m xs)
+    List (Atom (Keyword "cdr"):_) -> error "cdr: incorrect arity"
+
+    List [Atom (Keyword "cons"), x, xs] -> bCons (eval m x) (eval m xs)
+    List (Atom (Keyword "cons"):_) -> error "cons: incorrect arity"
+
+    List [Atom (Keyword "if"), cnd, x, y] -> bIf m cnd x y
+    List (Atom (Keyword "if"):_) -> error "if: incorrect arity"
+
+    List (Atom (Keyword "cond"):xs) -> bCond m xs
