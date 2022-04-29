@@ -4,7 +4,17 @@
 
 module Expr where
 
-data Atom = Number Int | Keyword String deriving(Show, Eq)
+import Data.List(intercalate)
 
-data Expr = Atom Atom | List [Expr] deriving(Show)
+data Atom = Number Int | Keyword String deriving Eq
+
+instance Show Atom where
+  show (Number x) = show x
+  show (Keyword s) = s
+
+data Expr = Atom Atom | List [Expr]
+
+instance Show Expr where
+  show (Atom a) = show a
+  show (List xs) = ('(':) . (++")") . intercalate " " . map show $ xs
 
