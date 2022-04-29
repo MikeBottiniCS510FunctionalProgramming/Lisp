@@ -7,10 +7,7 @@ number :: Parser Atom
 number = (Number . read) <$> many1 digit
 
 keyword :: Parser Atom
-keyword = do
-  first <- letter
-  rest <- many alphaNum
-  pure $ Keyword $ first : rest
+keyword = Keyword <$> many1 (alphaNum <|> oneOf "!$%&*+-./:<=>?@^_~")
 
 atom :: Parser Atom
 atom = number <|> keyword
