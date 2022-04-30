@@ -19,6 +19,7 @@ data Expr = Atom Atom |
 
 instance Show Expr where
   show (Atom a) = show a
+  show (List []) = "nil"
   show (List xs) = ('(':) . (++")") . intercalate " " . map show $ xs
   show (Closure captures args expr)
     = intercalate " " ["Closure", show captures, show args, show expr]

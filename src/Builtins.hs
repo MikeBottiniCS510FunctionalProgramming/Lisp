@@ -67,8 +67,8 @@ bCond _ _ = error "current clause must be a two-element list!"
 
 
 bLambda :: Map.Map String Expr -> Expr -> Expr -> Expr
-bLambda captures (List args) body
-  | all isKeyword args = Closure captures (map get args) body
+bLambda captures (List params) body
+  | all isKeyword params = Closure captures (map get params) body
   | otherwise = error "lambda: malformed expression!"
       where isKeyword (Atom (Keyword _)) = True
             isKeyword _ = False
@@ -111,3 +111,10 @@ eval m xs = case xs of
 
     List [Atom (Keyword "lambda"), args, body] -> bLambda m args body
     List (Atom (Keyword "lambda"):_) -> error "lambda: incorrect arity"
+
+    List ((Closure captures params body):args) ->
+      eval (Map.unions [Map.fromList (zip params (map (eval m) args)), captures, m]) body
+
+    (List []) -> nil
+    (List xs) -> eval m . List . map (eval m) $ xs
+
