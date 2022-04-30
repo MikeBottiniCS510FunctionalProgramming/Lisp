@@ -65,6 +65,15 @@ bCond m ((List [x, y]):zs) = case (eval m x) of
   _ -> eval m y
 bCond _ _ = error "current clause must be a two-element list!"
 
+
+bLambda :: Map.Map String Expr -> Expr -> Expr -> Expr
+bLambda captures (List args) body
+  | all isKeyword args = Closure captures (map get args) body
+  | otherwise = error "lambda: malformed expression!"
+      where isKeyword (Atom (Keyword _)) = True
+            isKeyword _ = False
+            get (Atom (Keyword s)) = s
+
 eval :: Map.Map String Expr -> Expr -> Expr
 
 -- If the expression is a number, it evaluates to itself.
@@ -99,3 +108,6 @@ eval m xs = case xs of
     List (Atom (Keyword "if"):_) -> error "if: incorrect arity"
 
     List (Atom (Keyword "cond"):xs) -> bCond m xs
+
+    List [Atom (Keyword "lambda"), args, body] -> bLambda m args body
+    List (Atom (Keyword "lambda"):_) -> error "lambda: incorrect arity"

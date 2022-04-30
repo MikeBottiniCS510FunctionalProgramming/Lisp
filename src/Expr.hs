@@ -5,6 +5,7 @@
 module Expr where
 
 import Data.List(intercalate)
+import qualified Data.Map.Strict as Map
 
 data Atom = Number Int | Keyword String deriving Eq
 
@@ -12,9 +13,13 @@ instance Show Atom where
   show (Number x) = show x
   show (Keyword s) = s
 
-data Expr = Atom Atom | List [Expr]
+data Expr = Atom Atom |
+            List [Expr] | 
+            Closure (Map.Map String Expr) [String] Expr
 
 instance Show Expr where
   show (Atom a) = show a
   show (List xs) = ('(':) . (++")") . intercalate " " . map show $ xs
+  show (Closure captures args expr)
+    = intercalate " " ["Closure", show captures, show args, show expr]
 
