@@ -14,6 +14,7 @@
 module Builtins where
 
 import qualified Data.Map.Strict as Map
+import Data.Map.Strict ((!))
 
 import Expr
 
@@ -115,6 +116,9 @@ eval m xs = case xs of
     List ((Closure captures params body):args) ->
       eval (Map.unions [Map.fromList (zip params (map (eval m) args)), captures, m]) body
 
-    (List []) -> nil
-    (List xs) -> eval m . List . map (eval m) $ xs
+    List [] -> nil
+    List (Atom (Keyword x):xs) -> 
+      eval m (List ((m ! x) : map (eval m) xs))
+    List (x@(Atom _):xs) -> error (show x ++ ": not a function!")
+    List xs -> eval m (List (map (eval m) xs))
 
