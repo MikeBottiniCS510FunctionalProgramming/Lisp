@@ -115,6 +115,8 @@ eval m xs = case xs of
 
     List ((Closure captures params body):args) ->
       eval (Map.unions [Map.fromList (zip params (map (eval m) args)), captures, m]) body
+    
+    c@(Closure _ _ _) -> c
 
     List [] -> nil
     List (Atom (Keyword x):xs) -> 
