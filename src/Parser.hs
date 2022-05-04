@@ -24,3 +24,5 @@ quoted = do
 expr :: Parser Expr
 expr = list <|> (Atom <$> atom) <|> quoted
 
+parseExpr :: String -> Either ParseError Expr
+parseExpr = parse expr ""
