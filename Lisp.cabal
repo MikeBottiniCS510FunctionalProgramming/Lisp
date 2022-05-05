@@ -21,7 +21,8 @@ executable Project
   other-modules:
                        Expr,
                        Parser,
-                       Builtins
+                       Builtins,
+                       Arithmetic
   -- other-extensions:
   build-depends:       base >=4.13 && <4.14,
                        parsec >= 3.1.15.0 && <3.2,
