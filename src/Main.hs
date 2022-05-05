@@ -6,9 +6,27 @@ import Builtins
 
 import Text.ParserCombinators.Parsec
 import qualified Data.Map.Strict as Map
+import Data.Either
 
-parseAndEval :: String -> Either ParseError Expr
-parseAndEval s = eval Map.empty <$> parse expr "" s
+parseAndEval :: Map.Map String Expr -> String -> Either ParseError Expr
+parseAndEval m s = eval m <$> parse expr "" s
+
+prelude1 = fromRight (error "eval error!") . parseAndEval Map.empty <$> Map.fromList [
+    ("atom", "(lambda (x) (atom x))"),
+    ("cons", "(lambda (x xs) (cons x xs))"),
+    ("car", "(lambda (xs) (car xs))"),
+    ("cdr", "(lambda (xs) (cdr xs))"),
+    ("foldl", "(label foldl (f acc xs) (if (atom xs) acc (foldl f (f acc (car xs)) (cdr xs))))")]
+
+prelude2 = Map.union prelude1 $ fromRight (error "eval error!") .  parseAndEval prelude1 <$> Map.fromList [
+    ("reverse", "(lambda (xs) (foldl (lambda (result x) (cons x result)) () xs))")]
+    
+prelude3 = Map.union prelude2 $ fromRight (error "eval error!") . parseAndEval prelude2 <$> Map.fromList [
+    ("map", "(lambda (f xs) (reverse (foldl (lambda (acc x) (cons (f x) acc)) () xs)))")]
+
+
+parseAndEvalPrelude :: String -> Either ParseError Expr
+parseAndEvalPrelude s = eval prelude3 <$> parse expr "" s
 
 main :: IO ()
 main = putStrLn "Hello, Haskell!"
