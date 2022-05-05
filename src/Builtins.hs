@@ -75,6 +75,10 @@ bLambda captures (List params) body
             isKeyword _ = False
             get (Atom (Keyword s)) = s
 
+bLabel :: String -> Map.Map String Expr -> Expr -> Expr -> Expr
+bLabel label captures params body = case bLambda captures params body of
+  f@(Closure captures params body) -> Closure (Map.insert label f captures) params body
+
 eval :: Map.Map String Expr -> Expr -> Expr
 
 -- If the expression is a number, it evaluates to itself.
@@ -113,8 +117,11 @@ eval m xs = case xs of
     List [Atom (Keyword "lambda"), args, body] -> bLambda m args body
     List (Atom (Keyword "lambda"):_) -> error "lambda: incorrect arity"
 
+    List [Atom (Keyword "label"), Atom (Keyword label), args, body] -> bLabel label m args body
+    List (Atom (Keyword "label"):_) -> error "label: incorrect arity"
+
     List ((Closure captures params body):args) ->
-      eval (Map.unions [Map.fromList (zip params (map (eval m) args)), captures, m]) body
+      eval (Map.unions [Map.fromList (zip params args), captures, m]) body
     
     c@(Closure _ _ _) -> c
 
@@ -122,5 +129,5 @@ eval m xs = case xs of
     List (Atom (Keyword x):xs) -> 
       eval m (List ((m ! x) : map (eval m) xs))
     List (x@(Atom _):xs) -> error (show x ++ ": not a function!")
-    List xs -> eval m (List (map (eval m) xs))
+    List (x:xs) -> eval m (List (eval m x : xs))
 
