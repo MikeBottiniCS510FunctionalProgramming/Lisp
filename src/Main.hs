@@ -12,6 +12,8 @@ parseAndEval :: Map.Map String Expr -> String -> Either ParseError Expr
 parseAndEval m s = eval m <$> parse expr "" s
 
 prelude1 = fromRight (error "eval error!") . parseAndEval Map.empty <$> Map.fromList [
+    ("nil", "()"),
+    ("t", "'t"),
     ("atom", "(lambda (x) (atom x))"),
     ("cons", "(lambda (x xs) (cons x xs))"),
     ("car", "(lambda (xs) (car xs))"),
