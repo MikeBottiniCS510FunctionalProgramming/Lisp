@@ -87,9 +87,6 @@ createBuiltinOnList2 :: String -> (Expr -> Expr -> Expr) -> [Expr] -> Expr
 createBuiltinOnList2 _ f [x, y] = f x y
 createBuiltinOnList2 msg f _ = error (msg ++ " is an arity-2 function!")
 
-createBuiltinOnListVariadic :: (Expr -> Expr -> Expr) -> Expr -> [Expr] -> Expr
-createBuiltinOnListVariadic f = foldl f
-
 builtinPrelude :: Map.Map String Expr
 builtinPrelude = Map.fromList [
   ("atom",  Builtin "atom" $ createBuiltinOnList1 "atom" bAtom),

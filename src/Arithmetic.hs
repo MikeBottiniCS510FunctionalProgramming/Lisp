@@ -27,9 +27,9 @@ bMod = bOp "mod" mod
 
 arithmeticPrelude :: Map.Map String Expr
 arithmeticPrelude = Map.fromList [
-  ("+", Builtin "+" $ createBuiltinOnListVariadic bAdd (Atom (Number 0))),
-  ("-", Builtin "-" $ createBuiltinOnListVariadic bSub (Atom (Number 0))),
-  ("*", Builtin "*" $ createBuiltinOnListVariadic bMul (Atom (Number 1))),
-  ("/", Builtin "/" $ createBuiltinOnList2 "div" bDiv),
+  ("+", Builtin "+" $ foldl bAdd (Atom (Number 0))),
+  ("-", Builtin "-" $ foldl1 bSub),
+  ("*", Builtin "*" $ foldl bMul (Atom (Number 1))),
+  ("/", Builtin "/" $ foldl1 bDiv),
   ("mod", Builtin "mod" $ createBuiltinOnList2 "mod" bMod)]
 
