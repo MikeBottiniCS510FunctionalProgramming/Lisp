@@ -79,6 +79,22 @@ bLabel :: String -> Map.Map String Expr -> Expr -> Expr -> Expr
 bLabel label captures params body = case bLambda captures params body of
   f@(Closure captures params body) -> Closure (Map.insert label f captures) params body
 
+createBuiltinOnList1 :: String -> (Expr -> Expr) -> [Expr] -> Expr
+createBuiltinOnList1 _ f [x] = f x
+createBuiltinOnList1 msg f _ = error (msg ++ " is an arity-1 function!")
+
+createBuiltinOnList2 :: String -> (Expr -> Expr -> Expr) -> [Expr] -> Expr
+createBuiltinOnList2 _ f [x, y] = f x y
+createBuiltinOnList2 msg f _ = error (msg ++ " is an arity-2 function!")
+
+builtinPrelude :: Map.Map String Expr
+builtinPrelude = Map.fromList [
+  ("atom",  Builtin "atom" $ createBuiltinOnList1 "atom" bAtom),
+  ("eq",    Builtin "eq" $ createBuiltinOnList2 "eq" bEq),
+  ("car",   Builtin "car" $ createBuiltinOnList1 "car" bCar),
+  ("cdr",   Builtin "cdr" $ createBuiltinOnList1 "cdr" bCdr),
+  ("cons",  Builtin "cons" $ createBuiltinOnList2 "cons" bCons)]
+
 eval :: Map.Map String Expr -> Expr -> Expr
 
 -- If the expression is a number, it evaluates to itself.
@@ -94,21 +110,6 @@ eval m xs = case xs of
     List [Atom (Keyword "quote"), x] -> bQuote x
     List (Atom (Keyword "quote"):_) -> error "quote: incorrect arity"
 
-    List [Atom (Keyword "atom"), x] -> bAtom (eval m x)
-    List (Atom (Keyword "atom"):_) -> error "atom: incorrect arity"
-
-    List [Atom (Keyword "eq"), x, y] -> bEq (eval m x) (eval m y)
-    List (Atom (Keyword "eq"):_) -> error "eq: incorrect arity"
-
-    List [Atom (Keyword "car"), xs] -> bCar (eval m xs)
-    List (Atom (Keyword "car"):_) -> error "car: incorrect arity"
-
-    List [Atom (Keyword "cdr"), xs] -> bCdr (eval m xs)
-    List (Atom (Keyword "cdr"):_) -> error "cdr: incorrect arity"
-
-    List [Atom (Keyword "cons"), x, xs] -> bCons (eval m x) (eval m xs)
-    List (Atom (Keyword "cons"):_) -> error "cons: incorrect arity"
-
     List [Atom (Keyword "if"), cnd, x, y] -> bIf m cnd x y
     List (Atom (Keyword "if"):_) -> error "if: incorrect arity"
 
@@ -121,13 +122,16 @@ eval m xs = case xs of
     List (Atom (Keyword "label"):_) -> error "label: incorrect arity"
 
     List ((Closure captures params body):args) ->
-      eval (Map.unions [Map.fromList (zip params args), captures, m]) body
+      eval (Map.unions [Map.fromList (zip params (map (eval m) args)), captures, m]) body
+
+    List ((Builtin _ f):xs) -> f . map (eval m) $ xs
     
     c@(Closure _ _ _) -> c
+    b@(Builtin _ _) -> b
 
     List [] -> nil
     List (Atom (Keyword x):xs) -> 
-      eval m (List ((m ! x) : map (eval m) xs))
+      eval m (List ((m ! x) : xs))
     List (x@(Atom _):xs) -> error (show x ++ ": not a function!")
     List (x:xs) -> eval m (List (eval m x : xs))
 

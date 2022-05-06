@@ -15,7 +15,8 @@ instance Show Atom where
 
 data Expr = Atom Atom |
             List [Expr] | 
-            Closure (Map.Map String Expr) [String] Expr
+            Closure (Map.Map String Expr) [String] Expr |
+            Builtin String ([Expr] -> Expr)
 
 instance Show Expr where
   show (Atom a) = show a
@@ -23,4 +24,5 @@ instance Show Expr where
   show (List xs) = ('(':) . (++")") . intercalate " " . map show $ xs
   show (Closure captures args expr)
     = intercalate " " ["Closure", show captures, show args, show expr]
+  show (Builtin label _) = "Builtin " ++ label
 
