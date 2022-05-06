@@ -121,6 +121,9 @@ eval m xs = case xs of
     List [Atom (Keyword "label"), Atom (Keyword label), args, body] -> bLabel label m args body
     List (Atom (Keyword "label"):_) -> error "label: incorrect arity"
 
+    List [Atom (Keyword "eval"), xs] -> eval m (eval m xs)
+    List (Atom (Keyword "eval"):_) -> error "eval: incorrect arity"
+
     List ((Closure captures params body):args) ->
       eval (Map.unions [Map.fromList (zip params (map (eval m) args)), captures, m]) body
 
