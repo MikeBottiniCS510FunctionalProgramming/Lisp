@@ -28,7 +28,8 @@ prelude3 = Map.union prelude2 $
            fromRight (error "eval error!") . 
            parseAndEval prelude2 <$> Map.fromList [
     ("map", "(lambda (f xs) (reverse (foldl (lambda (acc x) (cons (f x) acc)) () xs)))"),
-    ("concat", "(lambda (xs ys) (foldl (flip cons) ys (reverse xs)))")]
+    ("concat", "(lambda (xs ys) (foldl (flip cons) ys (reverse xs)))"),
+    ("filter", "(lambda (pred xs) (reverse (foldl (lambda (acc x) (if (pred x) (cons x acc) acc)) nil xs)))")]
 
 
 parseAndEvalPrelude :: String -> Either ParseError Expr
