@@ -3,6 +3,7 @@ module Main where
 import Expr
 import Parser
 import Builtins
+import Arithmetic
 
 import Text.ParserCombinators.Parsec
 import qualified Data.Map.Strict as Map
@@ -31,9 +32,11 @@ prelude3 = Map.union prelude2 $
     ("concat", "(lambda (xs ys) (foldl (flip cons) ys (reverse xs)))"),
     ("filter", "(lambda (pred xs) (reverse (foldl (lambda (acc x) (if (pred x) (cons x acc) acc)) nil xs)))")]
 
+prelude4 = Map.union prelude3 arithmeticPrelude
+
 
 parseAndEvalPrelude :: String -> Either ParseError Expr
-parseAndEvalPrelude s = eval prelude3 <$> parse expr "" s
+parseAndEvalPrelude s = eval prelude4 <$> parse expr "" s
 
 main :: IO ()
 main = putStrLn "Hello, Haskell!"

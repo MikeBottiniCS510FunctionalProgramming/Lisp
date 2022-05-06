@@ -1,6 +1,9 @@
 module Arithmetic where
 
 import Expr
+import Builtins
+
+import qualified Data.Map.Strict as Map
 
 bOp :: String -> (Int -> Int -> Int) -> Expr -> Expr -> Expr
 bOp msg op x y = case (x, y) of
@@ -8,13 +11,25 @@ bOp msg op x y = case (x, y) of
     _ -> error (msg ++ ": values must be integers!")
 
 bAdd :: Expr -> Expr -> Expr
-bAdd = bOp "add" (+)
+bAdd = bOp "+" (+)
 
 bSub :: Expr -> Expr -> Expr
-bSub = bOp "sub" (-)
+bSub = bOp "-" (-)
 
 bMul :: Expr -> Expr -> Expr
-bMul = bOp "mul" (*)
+bMul = bOp "*" (*)
 
 bDiv :: Expr -> Expr -> Expr
-bDiv = bOp "div" div
+bDiv = bOp "/" div
+
+bMod :: Expr -> Expr -> Expr
+bMod = bOp "mod" mod
+
+arithmeticPrelude :: Map.Map String Expr
+arithmeticPrelude = Map.fromList [
+  ("+", Builtin "+" $ createBuiltinOnListVariadic bAdd (Atom (Number 0))),
+  ("-", Builtin "-" $ createBuiltinOnListVariadic bSub (Atom (Number 0))),
+  ("*", Builtin "*" $ createBuiltinOnListVariadic bMul (Atom (Number 1))),
+  ("/", Builtin "/" $ createBuiltinOnList2 "div" bDiv),
+  ("mod", Builtin "mod" $ createBuiltinOnList2 "mod" bMod)]
+
