@@ -79,6 +79,10 @@ bLabel :: String -> Map.Map String Expr -> Expr -> Expr -> Expr
 bLabel label captures params body = case bLambda captures params body of
   f@(Closure captures params body) -> Closure (Map.insert label f captures) params body
 
+bListP :: Expr -> Expr
+bListP (List _) = t
+bListP _ = nil 
+
 createBuiltinOnList1 :: String -> (Expr -> Expr) -> [Expr] -> Expr
 createBuiltinOnList1 _ f [x] = f x
 createBuiltinOnList1 msg f _ = error (msg ++ " is an arity-1 function!")
@@ -93,7 +97,8 @@ builtinPrelude = Map.fromList [
   ("eq",    Builtin "eq" $ createBuiltinOnList2 "eq" bEq),
   ("car",   Builtin "car" $ createBuiltinOnList1 "car" bCar),
   ("cdr",   Builtin "cdr" $ createBuiltinOnList1 "cdr" bCdr),
-  ("cons",  Builtin "cons" $ createBuiltinOnList2 "cons" bCons)]
+  ("cons",  Builtin "cons" $ createBuiltinOnList2 "cons" bCons),
+  ("listp", Builtin "listp" $ createBuiltinOnList1 "listp" bListP)]
 
 eval :: Map.Map String Expr -> Expr -> Expr
 
