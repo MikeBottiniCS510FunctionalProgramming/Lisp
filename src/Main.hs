@@ -18,7 +18,8 @@ prelude1 = Map.union builtinPrelude $
     ("nil", "()"),
     ("t", "'t"),
     ("foldl", "(label foldl (f acc xs) (if (atom xs) acc (foldl f (f acc (car xs)) (cdr xs))))"),
-    ("flip", "(lambda (f) (lambda (x y) (f y x)))")]
+    ("flip", "(lambda (f) (lambda (x y) (f y x)))"),
+    ("Y", "(lambda (h) ((lambda (x) (h (lambda (a) ((x x) a)))) (lambda (x) (h (lambda (a) ((x x) a))))))")]
 
 prelude2 = Map.union prelude1 $
            fromRight (error "eval error!") . 
