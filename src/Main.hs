@@ -8,9 +8,7 @@ import Arithmetic
 import Text.ParserCombinators.Parsec
 import qualified Data.Map.Strict as Map
 import Data.Either
-
-parseAndEval :: Map.Map String Expr -> String -> Either ParseError Expr
-parseAndEval m s = eval m <$> parse expr "" s
+import Control.Monad.State
 
 prelude1 = Map.union builtinPrelude $
            fromRight (error "eval error!") . 
@@ -35,9 +33,17 @@ prelude3 = Map.union prelude2 $
 
 prelude4 = Map.union prelude3 arithmeticPrelude
 
+parseAndEvalS :: String -> StateT (Map.Map String Expr) (Either ParseError) Expr
+parseAndEvalS s = StateT (\m ->
+    case parseExpr s of
+        Left e -> Left e
+        Right e -> Right (runState (eval e) m))
+
+parseAndEval :: Map.Map String Expr -> String -> Either ParseError Expr
+parseAndEval m s = evalStateT (parseAndEvalS s) m
 
 parseAndEvalPrelude :: String -> Either ParseError Expr
-parseAndEvalPrelude s = eval prelude4 <$> parse expr "" s
+parseAndEvalPrelude s = evalStateT (parseAndEvalS s) prelude4
 
 main :: IO ()
 main = putStrLn "Hello, Haskell!"

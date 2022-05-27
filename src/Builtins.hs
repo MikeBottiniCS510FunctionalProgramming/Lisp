@@ -15,6 +15,7 @@ module Builtins where
 
 import qualified Data.Map.Strict as Map
 import Data.Map.Strict ((!))
+import Control.Monad.State
 
 import Expr
 
@@ -53,31 +54,41 @@ bCons :: Expr -> Expr -> Expr
 bCons x (Atom _) = error "cons expects a list!"
 bCons x (List xs) = List (x:xs)
 
-bIf :: Map.Map String Expr -> Expr -> Expr -> Expr -> Expr
-bIf m cnd x y = case (eval m cnd) of
-  (List []) -> eval m y
-  _ -> eval m x
+bIf :: Expr -> Expr -> Expr -> State (Map.Map String Expr) Expr
+bIf cnd x y = state (\m -> case (runState (eval cnd) m) of
+  (List [], m') -> runState (eval y) m'
+  (_, m') -> runState (eval x) m')
 
 -- We don't have macros, so we have to define `cond`, which works on a list of Exprs.
-bCond :: Map.Map String Expr -> [Expr] -> Expr
-bCond _ [] = nil
-bCond m ((List [x, y]):zs) = case (eval m x) of
-  (List []) -> bCond m zs
-  _ -> eval m y
-bCond _ _ = error "current clause must be a two-element list!"
+bCond :: [Expr] -> State (Map.Map String Expr) Expr 
+bCond [] = state (\m -> (nil, m))
+bCond ((List [x, y]):zs) = state (\m -> case runState (eval x) m of
+  (List [], m') -> runState (bCond zs) m'
+  (_, m') -> runState (eval y) m')
+bCond _ = error "current clause must be a two-element list!"
 
 
-bLambda :: Map.Map String Expr -> Expr -> Expr -> Expr
-bLambda captures (List params) body
-  | all isKeyword params = Closure captures (map get params) body
+bLambda :: Expr -> Expr -> State (Map.Map String Expr) Expr
+bLambda (List params) body
+  | all isKeyword params = state (\m ->
+    ((Closure m (map get params) body), m))
   | otherwise = error "lambda: malformed expression!"
       where isKeyword (Atom (Keyword _)) = True
             isKeyword _ = False
             get (Atom (Keyword s)) = s
 
-bLabel :: String -> Map.Map String Expr -> Expr -> Expr -> Expr
-bLabel label captures params body = case bLambda captures params body of
-  f@(Closure captures params body) -> Closure (Map.insert label f captures) params body
+bLabel :: String -> Expr -> Expr -> State (Map.Map String Expr) Expr
+bLabel label params body = state (\s -> do
+  case runState (bLambda params body) s of
+    (f@(Closure captures params body), s') -> (Closure (Map.insert label f captures) params body, s'))
+
+bSet :: Expr -> Expr -> State (Map.Map String Expr) Expr
+bSet (Atom (Keyword s)) expr = do
+  m <- get
+  let (evaledExpr, m') = runState (eval expr) m
+  put (Map.insert s evaledExpr m')
+  return evaledExpr
+bSet _ _ = error "set! expects a keyword!"
 
 bListP :: Expr -> Expr
 bListP (List _) = t
@@ -100,46 +111,60 @@ builtinPrelude = Map.fromList [
   ("cons",  Builtin "cons" $ createBuiltinOnList2 "cons" bCons),
   ("listp", Builtin "listp" $ createBuiltinOnList1 "listp" bListP)]
 
-eval :: Map.Map String Expr -> Expr -> Expr
+eval :: Expr -> State (Map.Map String Expr) Expr
 
 -- If the expression is a number, it evaluates to itself.
-eval _ x@(Atom (Number _)) = x
+eval x@(Atom (Number _)) = return x
 
 -- If the expression is an atom but is a keyword, a lookup occurs.
-eval m (Atom (Keyword k)) = case Map.lookup k m of
-    Just e -> e
+eval (Atom (Keyword k)) = do
+  m <- get
+  case Map.lookup k m of
+    Just e -> return e
     Nothing -> error ("Lookup error " ++ k)
 
 -- If the expression is a list of expressions, we now perform pattern matching.
-eval m xs = case xs of
-    List [Atom (Keyword "quote"), x] -> bQuote x
+eval xs = case xs of
+    List [Atom (Keyword "quote"), x] -> return (bQuote x)
     List (Atom (Keyword "quote"):_) -> error "quote: incorrect arity"
 
-    List [Atom (Keyword "if"), cnd, x, y] -> bIf m cnd x y
+    List [Atom (Keyword "if"), cnd, x, y] -> bIf cnd x y
     List (Atom (Keyword "if"):_) -> error "if: incorrect arity"
 
-    List (Atom (Keyword "cond"):xs) -> bCond m xs
+    List (Atom (Keyword "cond"):xs) -> bCond xs
 
-    List [Atom (Keyword "lambda"), args, body] -> bLambda m args body
+    List [Atom (Keyword "lambda"), args, body] -> bLambda args body
     List (Atom (Keyword "lambda"):_) -> error "lambda: incorrect arity"
 
-    List [Atom (Keyword "label"), Atom (Keyword label), args, body] -> bLabel label m args body
+    List [Atom (Keyword "label"), Atom (Keyword label), args, body] -> bLabel label args body
     List (Atom (Keyword "label"):_) -> error "label: incorrect arity"
 
-    List [Atom (Keyword "eval"), xs] -> eval m (eval m xs)
+    List [Atom (Keyword "set!"), Atom (Keyword k), v] -> bSet (Atom (Keyword k)) v
+    List [Atom (Keyword "set!"), _, v] -> error "set!: not a keyword!"
+    List (Atom (Keyword "set!"):_) -> error "set!: incorrect arity"
+
+    List [Atom (Keyword "eval"), xs] -> state (\m -> do
+      let (xs', m') = runState (eval xs) m
+      runState (eval xs') m')
     List (Atom (Keyword "eval"):_) -> error "eval: incorrect arity"
 
-    List ((Closure captures params body):args) ->
-      eval (Map.unions [Map.fromList (zip params (map (eval m) args)), captures, m]) body
+    List ((Closure captures params body):args) -> state (\m -> do
+      let argS = mapM eval args
+      let (evaledArgs, m') = runState argS m
+      runState (eval body) (Map.unions [Map.fromList (zip params evaledArgs), captures, m']))
 
-    List ((Builtin _ f):xs) -> f . map (eval m) $ xs
+    List ((Builtin _ f):xs) -> state (\m -> do
+      let argS = mapM eval xs
+      let (evaledArgs, m') = runState argS m
+      (f evaledArgs, m'))
     
-    c@(Closure _ _ _) -> c
-    b@(Builtin _ _) -> b
+    c@(Closure _ _ _) -> return c
+    b@(Builtin _ _) -> return b
 
-    List [] -> nil
-    List (Atom (Keyword x):xs) -> 
-      eval m (List ((m ! x) : xs))
+    List [] -> return nil
+    List (Atom (Keyword x):xs) -> state (\m ->
+      runState (eval (List ((m ! x) : xs))) m)
     List (x@(Atom _):xs) -> error (show x ++ ": not a function!")
-    List (x:xs) -> eval m (List (eval m x : xs))
-
+    List (x:xs) -> state (\m -> do
+      let (y, m') = runState (eval x) m
+      runState (eval (List (y : xs))) m')
