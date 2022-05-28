@@ -53,7 +53,7 @@ mainLoop m = do
   hFlush stdout
   line <- Exc.try getLine :: IO (Either Exc.SomeException String)
   case line of
-    Left _ -> putStrLn "Carthago delenda est."
+    Left _ -> putStrLn "Ceterum censeo Carthaginem esse delendam."
     Right ":state" -> do
       putStrLn . show $ m
       mainLoop m
