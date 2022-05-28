@@ -23,6 +23,6 @@ instance Show Expr where
   show (List []) = "nil"
   show (List xs) = ('(':) . (++")") . intercalate " " . map show $ xs
   show (Closure captures args expr)
-    = intercalate " " ["Closure", show captures, show args, show expr]
+    = intercalate " " ["Closure", show args, show expr]
   show (Builtin label _) = "Builtin " ++ label
 
