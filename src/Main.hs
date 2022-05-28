@@ -9,6 +9,8 @@ import Text.ParserCombinators.Parsec
 import qualified Data.Map.Strict as Map
 import Data.Either
 import Control.Monad.State
+import System.IO
+import qualified Control.Exception as Exc
 
 prelude1 = Map.union builtinPrelude $
            fromRight (error "eval error!") . 
@@ -45,5 +47,24 @@ parseAndEval m s = evalStateT (parseAndEvalS s) m
 parseAndEvalPrelude :: String -> Either ParseError Expr
 parseAndEvalPrelude s = evalStateT (parseAndEvalS s) prelude4
 
+mainLoop :: Map.Map String Expr -> IO ()
+mainLoop m = do
+  putStr "> "
+  hFlush stdout
+  line <- Exc.try getLine :: IO (Either Exc.SomeException String)
+  case line of
+    Left _ -> putStrLn "Carthago delenda est."
+    Right ":state" -> do
+      putStrLn . show $ m
+      mainLoop m
+    Right line -> do
+      case runStateT (parseAndEvalS line) m of
+        (Left e) -> do
+          putStrLn . show $ e
+          mainLoop m
+        Right (expr, m') -> do
+          putStrLn . show $ expr
+          mainLoop m'
+
 main :: IO ()
-main = putStrLn "Hello, Haskell!"
+main = mainLoop prelude4
