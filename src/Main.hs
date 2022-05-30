@@ -14,7 +14,7 @@ import qualified Control.Exception as Exc
 
 prelude1 = Map.union builtinPrelude $
            fromRight (error "eval error!") . 
-           parseAndEval builtinPrelude <$> Map.fromList [
+           parseAndEval (Scope builtinPrelude Map.empty) <$> Map.fromList [
     ("nil", "()"),
     ("t", "'t"),
     ("foldl", "(label foldl (f acc xs) (if (atom xs) acc (foldl f (f acc (car xs)) (cdr xs))))"),
@@ -23,31 +23,31 @@ prelude1 = Map.union builtinPrelude $
 
 prelude2 = Map.union prelude1 $
            fromRight (error "eval error!") . 
-           parseAndEval prelude1 <$> Map.fromList [
+           parseAndEval (Scope prelude1 Map.empty) <$> Map.fromList [
     ("reverse", "(lambda (xs) (foldl (flip cons) () xs))")]
     
 prelude3 = Map.union prelude2 $
            fromRight (error "eval error!") . 
-           parseAndEval prelude2 <$> Map.fromList [
+           parseAndEval (Scope prelude2 Map.empty) <$> Map.fromList [
     ("map", "(lambda (f xs) (reverse (foldl (lambda (acc x) (cons (f x) acc)) () xs)))"),
     ("concat", "(lambda (xs ys) (foldl (flip cons) ys (reverse xs)))"),
     ("filter", "(lambda (pred xs) (reverse (foldl (lambda (acc x) (if (pred x) (cons x acc) acc)) nil xs)))")]
 
 prelude4 = Map.union prelude3 arithmeticPrelude
 
-parseAndEvalS :: String -> StateT (Map.Map String Expr) (Either ParseError) Expr
+parseAndEvalS :: String -> StateT Scope (Either ParseError) Expr
 parseAndEvalS s = StateT (\m ->
     case parseExpr s of
         Left e -> Left e
-        Right e -> Right (runState (eval Map.empty e) m))
+        Right e -> Right (runState (eval e) m))
 
-parseAndEval :: Map.Map String Expr -> String -> Either ParseError Expr
+parseAndEval :: Scope -> String -> Either ParseError Expr
 parseAndEval m s = evalStateT (parseAndEvalS s) m
 
 parseAndEvalPrelude :: String -> Either ParseError Expr
-parseAndEvalPrelude s = evalStateT (parseAndEvalS s) prelude4
+parseAndEvalPrelude s = evalStateT (parseAndEvalS s) (Scope prelude4 Map.empty)
 
-mainLoop :: Map.Map String Expr -> IO ()
+mainLoop :: Scope -> IO ()
 mainLoop m = do
   putStr "> "
   hFlush stdout
@@ -67,4 +67,4 @@ mainLoop m = do
           mainLoop m'
 
 main :: IO ()
-main = mainLoop prelude4
+main = mainLoop (Scope prelude4 Map.empty)
