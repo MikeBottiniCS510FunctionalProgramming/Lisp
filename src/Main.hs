@@ -39,7 +39,7 @@ parseAndEvalS :: String -> StateT (Map.Map String Expr) (Either ParseError) Expr
 parseAndEvalS s = StateT (\m ->
     case parseExpr s of
         Left e -> Left e
-        Right e -> Right (runState (eval e) m))
+        Right e -> Right (runState (eval Map.empty e) m))
 
 parseAndEval :: Map.Map String Expr -> String -> Either ParseError Expr
 parseAndEval m s = evalStateT (parseAndEvalS s) m
