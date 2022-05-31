@@ -12,28 +12,17 @@ import Control.Monad.State
 import System.IO
 import qualified Control.Exception as Exc
 
-prelude1 = Map.union builtinPrelude $
-           fromRight (error "eval error!") . 
-           parseAndEval (Scope builtinPrelude Map.empty) <$> Map.fromList [
-    ("nil", "()"),
-    ("t", "'t"),
-    ("foldl", "(label foldl (f acc xs) (if (atom xs) acc (foldl f (f acc (car xs)) (cdr xs))))"),
-    ("flip", "(lambda (f) (lambda (x y) (f y x)))"),
-    ("Y", "(lambda (h) ((lambda (x) (h (lambda (a) ((x x) a)))) (lambda (x) (h (lambda (a) ((x x) a))))))")]
-
-prelude2 = Map.union prelude1 $
-           fromRight (error "eval error!") . 
-           parseAndEval (Scope prelude1 Map.empty) <$> Map.fromList [
-    ("reverse", "(lambda (xs) (foldl (flip cons) () xs))")]
-    
-prelude3 = Map.union prelude2 $
-           fromRight (error "eval error!") . 
-           parseAndEval (Scope prelude2 Map.empty) <$> Map.fromList [
-    ("map", "(lambda (f xs) (reverse (foldl (lambda (acc x) (cons (f x) acc)) () xs)))"),
-    ("concat", "(lambda (xs ys) (foldl (flip cons) ys (reverse xs)))"),
-    ("filter", "(lambda (pred xs) (reverse (foldl (lambda (acc x) (if (pred x) (cons x acc) acc)) nil xs)))")]
-
-prelude4 = Map.union prelude3 arithmeticPrelude
+prelude :: [String]
+prelude = [
+  "(set! nil ())",
+  "(set! t 't)",
+  "(set! foldl (label foldl (f acc xs) (if (atom xs) acc (foldl f (f acc (car xs)) (cdr xs)))))",
+  "(set! flip (lambda (f) (lambda (x y) (f y x))))",
+  "(set! Y (lambda (h) ((lambda (x) (h (lambda (a) ((x x) a)))) (lambda (x) (h (lambda (a) ((x x) a)))))))",
+  "(set! reverse (lambda (xs) (foldl (flip cons) () xs)))",
+  "(set! map (lambda (f xs) (reverse (foldl (lambda (acc x) (cons (f x) acc)) () xs))))",
+  "(set! concat (lambda (xs ys) (foldl (flip cons) ys (reverse xs))))",
+  "(set! filter (lambda (pred xs) (reverse (foldl (lambda (acc x) (if (pred x) (cons x acc) acc)) nil xs))))"]
 
 parseAndEvalS :: String -> StateT Scope (Either ParseError) Expr
 parseAndEvalS s = StateT (\m ->
@@ -44,8 +33,11 @@ parseAndEvalS s = StateT (\m ->
 parseAndEval :: Scope -> String -> Either ParseError Expr
 parseAndEval m s = evalStateT (parseAndEvalS s) m
 
-parseAndEvalPrelude :: String -> Either ParseError Expr
-parseAndEvalPrelude s = evalStateT (parseAndEvalS s) (Scope prelude4 Map.empty)
+preludeScope :: Scope
+preludeScope 
+  = fromRight (error "prelude error!") . 
+    execStateT (mapM parseAndEvalS prelude) $ 
+    Scope (Map.union builtinPrelude arithmeticPrelude) Map.empty
 
 mainLoop :: Scope -> IO ()
 mainLoop m = do
@@ -67,4 +59,4 @@ mainLoop m = do
           mainLoop m'
 
 main :: IO ()
-main = mainLoop (Scope prelude4 Map.empty)
+main = mainLoop preludeScope
