@@ -16,7 +16,7 @@ instance Show Atom where
 data Expr = Atom Atom |
             List [Expr] | 
             Closure (Map.Map String Expr) [String] Expr |
-            Builtin String ([Expr] -> Expr)
+            Builtin String ([Expr] -> Either String Expr)
 
 instance Show Expr where
   show (Atom a) = show a

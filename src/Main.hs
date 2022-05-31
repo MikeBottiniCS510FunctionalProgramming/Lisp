@@ -24,13 +24,13 @@ prelude = [
   "(set! concat (lambda (xs ys) (foldl (flip cons) ys (reverse xs))))",
   "(set! filter (lambda (pred xs) (reverse (foldl (lambda (acc x) (if (pred x) (cons x acc) acc)) nil xs))))"]
 
-parseAndEvalS :: String -> StateT Scope (Either ParseError) Expr
+parseAndEvalS :: String -> StateT Scope (Either ParseError) (Either String Expr)
 parseAndEvalS s = StateT (\m ->
     case parseExpr s of
         Left e -> Left e
         Right e -> Right (runState (eval e) m))
 
-parseAndEval :: Scope -> String -> Either ParseError Expr
+parseAndEval :: Scope -> String -> Either ParseError (Either String Expr)
 parseAndEval m s = evalStateT (parseAndEvalS s) m
 
 preludeScope :: Scope
