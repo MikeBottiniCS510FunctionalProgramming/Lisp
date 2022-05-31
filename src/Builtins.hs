@@ -168,9 +168,12 @@ eval xs = case xs of
       let currentLocals = locals m
       let argS = mapM eval args
       let (evaledArgs, m') = runState argS m
-      let (result, m'') = runState (eval body) (m' { locals = Map.unions [Map.fromList (zip params evaledArgs), captures, currentLocals] })
-      modify (\m -> m { globals = (globals m'') })
-      return result
+      if (length evaledArgs /= length params) 
+        then error "closure: incorrect arity"
+        else do 
+          let (result, m'') = runState (eval body) (m' { locals = Map.unions [Map.fromList (zip params evaledArgs), captures, currentLocals] })
+          modify (\m -> m { globals = (globals m'') })
+          return result
 
     List ((Builtin _ f):xs) -> do
       m <- get
