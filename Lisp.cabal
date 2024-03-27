@@ -16,7 +16,7 @@ maintainer:          mbottini1@gmail.com
 build-type:          Simple
 extra-source-files:  CHANGELOG.md
 
-executable Project
+executable haskell-lisp
   main-is:             Main.hs
   other-modules:
                        Expr,
