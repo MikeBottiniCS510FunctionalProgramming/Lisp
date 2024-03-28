@@ -7,6 +7,22 @@
 This is a Lisp interpreter, implemented in Haskell. The program parses strings
 into S-expressions, evaluates them, and returns the result.
 
+# Building
+
+## Cabal
+
+    cabal build
+
+## Stack
+
+    stack build
+
+## Arch Linux's Awful Crap
+
+    mkdir build && cd build
+    cp ../PKGBUILD .
+    makepkg -si
+
 # What's implemented?
 
 * Parsing and evaluating of S-expressions.
